@@ -1,6 +1,7 @@
 /**
  * @file cbuf.h
- * @brief 
+ * @brief circular buffer that performs enqueuing and dequeuing concurrently
+ * @author boo
  */
 
 #ifndef CIRCULAR_BUFFER_H
@@ -25,6 +26,7 @@ int cbuf_deinit(void);
 
 /**
  * @brief function that enqueues data into circular buffer
+ * @pre circular queue must be initialization
  * @param [in] elem - element to be enqueued
  * @return 0 if enqueued. Otherwise, return error code.
  */
@@ -32,14 +34,15 @@ int cbuf_enqueue(int elem);
 
 /**
  * @brief function that dequeues data frm circular buffer
+ * @pre circular queue must be initialization
  * @param [out] elem - element to be dequeued
  * @return 0 if dequeued. Otherwise, return error code.
  */
 int cbuf_dequeue(int *elem);
 
 /**
- * @brief function that prints circular buffer
- * @return -
+ * @brief function that prints circular buffer's content as a list
+ * @note it is not part of circular buffer design, but implemented to view the buffer
  */
 void cbuf_print(void);
 

@@ -1,118 +1,154 @@
 #include <stdlib.h>
 #include <pthread.h>
-#include "cbuf.h"
+#include <time.h>
+#include "cbufTest.h"
 
-#define DEFAULT_NUMBERING_OFF (0)
-#define DEFAULT_ENQUEUE_COUNT (50)
-#define DEFAULT_DEQUEUE_COUNT (50)
+//! default start offset to start counting
+#define DEFAULT_NUMBERING_RANGE (1000)
+//! enqueue operation count for testing purposes
+#define DEFAULT_ENQUEUE_COUNT (2020)
+//! dequeue operation count for testing purposes
+#define DEFAULT_DEQUEUE_COUNT (2022)
 
-void test(void);
+/**
+ * @brief function that shows usage of application
+ */
 void usage(void);
+
+/**
+ * @brief function that executes concurrent operation on circular buffer
+ * @param [in] enqCount - enqueue count
+ * @param [in] deqCount - dequeu count
+ * @return 0 if execution is done successfully. otherwise, return error code.
+ */
+int executeConcurrently(int enqCount, int deqCount);
+
+/**
+ * @brief function that performs enqueuing operation on circular buffer
+ * @param [in] arg - generic argument
+ * @return NULL
+ */
 void *enqueue(void *arg);
+
+/**
+ * @brief function that performs dequeuing operation on circular buffer
+ * @param [in] arg - generic argument
+ * @return NULL
+ */
 void *dequeue(void *arg);
 
 int main(int argc, const char * argv[]) {
-  pthread_t enqThread;
-  pthread_t deqThread;
-  int enqCount = DEFAULT_ENQUEUE_COUNT;
-  int deqCount = DEFAULT_DEQUEUE_COUNT;
-
-  // argument checking block
-  if (1 != argc) {
-    if (3 == argc) {
-      enqCount = atoi(argv[1]);
-      deqCount = atoi(argv[2]);
-
-      if (enqCount < 0 || deqCount < 0) {
-	printf("The count values must be positive\n");
-	return -1;
+#if CBUF_TEST
+   cbufTest_init();
+   cbufTest_transaction();
+   cbufTest_deinit();
+#else
+   int enqCount = DEFAULT_ENQUEUE_COUNT;
+   int deqCount = DEFAULT_DEQUEUE_COUNT;
+   
+   // application accepts argument number as 1 or 3
+   if (1 != argc) {
+      if (3 == argc) {
+         enqCount = atoi(argv[1]);
+         deqCount = atoi(argv[2]);
+         
+         if (enqCount < 0 || deqCount < 0) {
+            printf("The count values must be positive\n");
+            usage();
+            return -1;
+         }
       }
-    }
-    else {
-      usage();
+      else {
+         usage();
+         return -1;
+      }
+   }
+
+   // to get random numbers for enqueuing
+   srand((unsigned int) time(NULL));
+   
+   if (0 != executeConcurrently(enqCount, deqCount)) {
+      perror("executeConcurrently");
       return -1;
-    }
-  }
+   }
+#endif
 
-  cbuf_init();
-
-  pthread_create(&enqThread, NULL, enqueue, &enqCount);
-  pthread_create(&deqThread, NULL, dequeue, &deqCount);
-
-  pthread_join(enqThread, NULL);
-  pthread_join(deqThread, NULL);
-
-  cbuf_print();
-  cbuf_deinit();
-
-  return 0;
+   return 0;
 }
 
 void usage(void) {
-  printf("./<executable> <enqueue count> <dequeue count>\n");
-  printf("note: default counts are %d %d respectively\n",
-	 DEFAULT_ENQUEUE_COUNT,
-	 DEFAULT_DEQUEUE_COUNT);
-  
-  return;
+   printf("./<executable>\n");
+   printf(" or\n");
+   printf("./<executable> <enqueue count> <dequeue count>\n");
+   printf("note: enqueue and dequeue operation counts are %d %d respectively\n",
+          DEFAULT_ENQUEUE_COUNT,
+          DEFAULT_DEQUEUE_COUNT);
+   
+   return;
 }
 
 void *enqueue(void *arg) {
-  int enqCount = *((int *) arg);
+   int enqCount = *((int *) arg);
+   int elem = 0;
+   
+   /*
+    * generally, a professional condition is provided for condition of 'while' loop,
+    * e.g. it may be 'true' for an infinite operation, or breakable condition from thread loop.
+    * the below condition, decreasing counter, is thoroughly demo-purpose.
+    */
+   while (0 != enqCount) {
+      // get number between [0, 999) to be enqueued randomly
+      elem = rand() % DEFAULT_NUMBERING_RANGE;
+      
+      cbuf_enqueue(elem); // no need to check return value here
+      --enqCount;
 
-  while (0 != enqCount) {
-    cbuf_enqueue(DEFAULT_NUMBERING_OFF + enqCount);
-    // printf is intentionally added since it makes a bit latency
-    printf("+ENQUEUED (%d)\n", enqCount);
-    --enqCount;
-  }
-
-  return NULL;
+      /*
+       * printf is intentionally added since it makes a bit latency. this thread function is
+       * demo-purpose. in a solution as operational, no need printf or random number generator
+       */
+      printf("+(%d) ", elem);
+   }
+   
+   return NULL;
 }
 
 void *dequeue(void *arg) {
-  int deqCount = *((int *) arg);
-  int elem;
+   int deqCount = *((int *) arg);
+   int elem = 0;
+   
+   while (0 != deqCount) {
+      cbuf_dequeue(&elem); // no need to check return value here
+      --deqCount;
 
-  while (0 != deqCount) {
-    cbuf_dequeue(&elem);
-    // printf is intentionally added since it makes a bit latency
-    printf("-DEQUEUED (%d)\n", elem);
-    --deqCount;
-  }
-
-  return NULL;
+      // printf is intentionally added since it makes a bit latency
+      printf("-(%d) ", elem);
+   }
+   
+   return NULL;
 }
 
-void test(void) {
-  int i = 0;
-  int data = 0;
-    
-  cbuf_init();
+int executeConcurrently(int enqCount, int deqCount) {
+   pthread_t enqThread;
+   pthread_t deqThread;
+   int err = 0;
+   
+   if (0 != (err = cbuf_init())) {
+      return err;
+   }
+   
+   pthread_create(&enqThread, NULL, enqueue, &enqCount);
+   pthread_create(&deqThread, NULL, dequeue, &deqCount);
+   
+   pthread_join(enqThread, NULL);
+   pthread_join(deqThread, NULL);
 
-  printf("\nInitial queue content\n");
-  cbuf_print();
-  printf("\n");
-    
-  for (i = 0; i < DEFAULT_ENQUEUE_COUNT; ++i) {
-    // 50 is arbitrary value, has no special meaning
-    cbuf_enqueue(i + 50);
-    printf("%02d enqueue (%02d): ", i + 50, i + 1);
-    cbuf_print();
-  }
-    
-  printf("\nQueue content\n");
-  cbuf_print();
-    
-  printf("\nDequeueing...\n");
-  for (i = 0; i < DEFAULT_DEQUEUE_COUNT; ++i) {
-    cbuf_dequeue(&data);
-    printf("%02d dequeue (%02d): ", i + 1, data);
-    cbuf_print();
-  }
+   printf("\n\nCircular Buffer Final Content: \n");
+   cbuf_print();
 
-  printf("\n\nQueue content\n");
-  cbuf_print();
-    
-  return;
+   if (0 != (err = cbuf_deinit())) {
+      return err;
+   }
+   
+   return 0;
 }
