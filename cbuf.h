@@ -42,7 +42,8 @@ int cbuf_dequeue(int *elem);
 
 /**
  * @brief function that prints circular buffer's content as a list
- * @note it is not part of circular buffer design, but implemented to view the buffer
+ * @note it is not part of circular buffer design, but implemented to view the buffer,
+ *       in output, H indicates head's current location, T indicates tail's current location.
  */
 void cbuf_print(void);
 
