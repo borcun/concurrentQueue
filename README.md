@@ -19,6 +19,10 @@ clearly, enqueuing and dequeuing counts may be increased giving two parameters t
 Note that more modern processor architectures can perform the operations without switching between threads or 
 with fewer switchings. To more clear outputs, please use big count values.
 
-**Development Environment:** <br>
-Apple clang version 13.0.0 (clang-1300.0.29.30) <br>
-Target: arm64-apple-darwin21.2.0
+**Development & Test Environments:** <br>
+Compiler 1: Apple clang version 13.0.0 (clang-1300.0.29.30) <br>
+Target   1: arm64-apple-darwin21.2.0<br><br>
+
+Compiler 2: gcc (GCC) 11.2.1 20220127 (Red Hat 11.2.1-9)<br>
+Target   2: Linux fedora 5.16.9-200.fc35.x86_64 #1 SMP PREEMPT<br>
+
